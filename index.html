@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizador Interactivo de Armonía Musical</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      padding: 20px;
+      text-align: center;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    .section {
+      margin: 20px auto;
+      padding: 15px;
+      background-color: #fff;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .button {
+      margin: 5px;
+      padding: 10px 15px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: #fff;
+      transition: background-color 0.3s;
+    }
+    .button:hover {
+      background-color: #45a049;
+    }
+    .clickable-note {
+      display: inline-block;
+      margin: 5px;
+      padding: 8px 12px;
+      background-color: #2196F3;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .clickable-note:hover {
+      background-color: #1976D2;
+    }
+    ul {
+      text-align: left;
+      list-style-type: disc;
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Visualizador Interactivo de Armonía Musical</h1>
+  
+  <!-- Sección para seleccionar la nota base -->
+  <div class="section" id="select-base-note">
+    <h2>Selecciona la nota base</h2>
+    <div id="base-notes-container"></div>
+  </div>
+  
+  <!-- Sección para seleccionar el tipo de acorde -->
+  <div class="section" id="select-chord-type" style="display: none;">
+    <h2>Selecciona el tipo de acorde para <span id="selected-base-note"></span></h2>
+    <div id="chord-types-container"></div>
+  </div>
+  
+  <!-- Sección de detalles del acorde seleccionado -->
+  <div class="section" id="chord-details" style="display: none;">
+    <h2 id="chord-title"></h2>
+    <p><strong>Notas del acorde:</strong></p>
+    <div id="chord-notes-container"></div>
+    <p>Haz clic en una nota para ver otros acordes que la contienen (posible bajo cifrado):</p>
+    <div id="common-chords-container"></div>
+    <div id="movement-suggestions"></div>
+  </div>
+  
+  <script>
+    // Notas cromáticas
+    const notas = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    
+    // Fórmulas de acordes en semitonos
+    const tiposAcordes = {
+      "Mayor": [0, 4, 7],
+      "Menor": [0, 3, 7],
+      "Disminuido": [0, 3, 6],
+      "Aumentado con 7ma": [0, 4, 8, 10]
+    };
+    
+    // Función para mostrar los botones de las notas base
+    function mostrarNotasBase() {
+      const container = document.getElementById("base-notes-container");
+      container.innerHTML = "";
+      notas.forEach(nota => {
+        const btn = document.createElement("button");
+        btn.textContent = nota;
+        btn.className = "button";
+        btn.addEventListener("click", () => seleccionarNotaBase(nota));
+        container.appendChild(btn);
+      });
+    }
+    
+    // Al seleccionar una nota base, se muestran las opciones de tipo de acorde
+    function seleccionarNotaBase(nota) {
+      document.getElementById("select-chord-type").style.display = "block";
+      document.getElementById("selected-base-note").textContent = nota;
+      const container = document.getElementById("chord-types-container");
+      container.innerHTML = "";
+      Object.keys(tiposAcordes).forEach(tipo => {
+        const btn = document.createElement("button");
+        btn.textContent = tipo;
+        btn.className = "button";
+        btn.addEventListener("click", () => mostrarDetallesAcorde(nota, tipo));
+        container.appendChild(btn);
+      });
+      // Ocultar detalles anteriores
+      document.getElementById("chord-details").style.display = "none";
+    }
+    
+    // Calcula las notas del acorde dado la nota base y el tipo de acorde
+    function calcularNotasAcorde(notaBase, tipo) {
+      const formula = tiposAcordes[tipo];
+      const indiceBase = notas.indexOf(notaBase);
+      const acordeNotas = formula.map(intervalo => notas[(indiceBase + intervalo) % notas.length]);
+      return acordeNotas;
+    }
+    
+    // Muestra los detalles del acorde seleccionado (nombre, notas, sugerencias)
+    function mostrarDetallesAcorde(notaBase, tipo) {
+      document.getElementById("chord-details").style.display = "block";
+      const titulo = `${notaBase} ${tipo}`;
+      document.getElementById("chord-title").textContent = titulo;
+      const acordeNotas = calcularNotasAcorde(notaBase, tipo);
+      
+      // Mostrar las notas del acorde como elementos clicables
+      const containerNotas = document.getElementById("chord-notes-container");
+      containerNotas.innerHTML = "";
+      acordeNotas.forEach(nota => {
+        const span = document.createElement("span");
+        span.textContent = nota;
+        span.className = "clickable-note";
+        span.addEventListener("click", () => mostrarAcordesComunes(nota, notaBase, tipo));
+        containerNotas.appendChild(span);
+      });
+      
+      // Mostrar algunas sugerencias de movimiento armónico
+      const suggestions = document.getElementById("movement-suggestions");
+      suggestions.innerHTML = "<p><strong>Sugerencias de movimientos armónicos:</strong></p><ul>" +
+        "<li>Mantén la nota común como bajo cifrado para suavizar la transición.</li>" +
+        "<li>Explora inversiones donde la nota seleccionada se convierta en el bajo.</li>" +
+        "<li>Prueba movimientos hacia acordes relativos que compartan notas en común.</li>" +
+        "</ul>";
+      
+      // Limpiar resultados anteriores de acordes comunes
+      document.getElementById("common-chords-container").innerHTML = "";
+    }
+    
+    // Al hacer clic en una nota del acorde, busca y muestra otros acordes que contengan esa nota
+    function mostrarAcordesComunes(notaSeleccionada, notaBaseActual, tipoActual) {
+      const container = document.getElementById("common-chords-container");
+      container.innerHTML = `<p><strong>Acordes que contienen la nota ${notaSeleccionada}:</strong></p>`;
+      
+      // Crear una lista de acordes que contengan la nota seleccionada
+      const lista = document.createElement("ul");
+      
+      // Recorremos todas las combinaciones de nota base y tipo de acorde
+      notas.forEach(nota => {
+        Object.keys(tiposAcordes).forEach(tipo => {
+          const acordeNotas = calcularNotasAcorde(nota, tipo);
+          if (acordeNotas.includes(notaSeleccionada)) {
+            // Evitar mostrar el acorde actual
+            if (!(nota === notaBaseActual && tipo === tipoActual)) {
+              const li = document.createElement("li");
+              li.textContent = `${nota} ${tipo} (${acordeNotas.join(", ")})`;
+              lista.appendChild(li);
+            }
+          }
+        });
+      });
+      
+      container.appendChild(lista);
+    }
+    
+    // Inicializamos la aplicación
+    mostrarNotasBase();
+  </script>
+</body>
+</html>
